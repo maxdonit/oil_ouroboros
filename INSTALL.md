@@ -1,7 +1,10 @@
 # Установка за 5 шагов
 
-Нужно: Docker с Compose v2, Python 3.10+, 16 ГБ памяти, ~25 ГБ диска, выход в интернет. GPU не нужен.
-Ключ LLM — один из двух: GigaChat (по умолчанию, Freemium бесплатен) или OpenRouter.
+Нужно: Docker с Compose v2, Python 3.10+, 16 ГБ памяти, ~25 ГБ диска, выход в интернет (на время сборки — и GitHub:
+образ Ouroboros собирается из его репозитория). GPU не нужен. Docker Desktop (Windows, macOS): в Settings → Resources
+дайте ему не меньше 16 ГБ памяти — кодировщику нужно 5 ГБ.
+Ключ LLM — один из двух: GigaChat (по умолчанию; Freemium бесплатен, но это квота токенов из личного кабинета — когда
+она кончится, GigaChat начнёт отвечать ошибкой) или OpenRouter (платно, потолок трат — `GATEWAY_BUDGET_USD`).
 
 ## 1. Скачать
 
@@ -34,7 +37,7 @@ docker compose up -d
 ## 4. Проверить
 
 ```bash
-docker compose ps                          # сервисы ядра — healthy, bootstrap — exited (0)
+docker compose ps                          # сервисы ядра — healthy; bootstrap и schedules — exited (0)
 docker compose exec tools oilo reports     # выпуски отчётов и сколько фрагментов уже в индексе
 docker compose exec console oilo smoke     # один живой ход через агента
 ```
@@ -43,7 +46,9 @@ docker compose exec console oilo smoke     # один живой ход чере
 все вкладки — кнопкой «Режим администратора». UI Ouroboros — порт 38630, пароль `ouroboros`.
 
 Консоль и UI видны всем в сети сервера (`OILO_BIND=0.0.0.0` в `.env`); только эта машина — `OILO_BIND=127.0.0.1`.
-В интернет пробрасывайте только порт 38620: у агента в UI Ouroboros есть shell.
+Консоль — без входа: кто её открыл, тот может и запустить eval (квота GigaChat или деньги OpenRouter в пределах
+`GATEWAY_BUDGET_USD`). Открывая её в интернет как демо, пробрасывайте только порт 38620; порт 38630 — никогда: у
+агента в UI Ouroboros есть shell.
 
 ## 5. Спросить и прогнать
 
@@ -53,9 +58,11 @@ docker compose exec console oilo eval --only R01 F01 O01               # выб�
 docker compose exec console oilo eval --label full --report var/eval_report.md   # весь набор (42 кейса)
 docker compose exec console oilo demo                                  # 7 демо-диалогов → var/demo_dialogs.md
 docker compose exec tools oilo eval-retrieval --label check            # поиск по отчётам, без агента
+docker compose cp console:/app/var/eval_report.md .                    # отчёт и демо — из контейнера к себе
+docker compose cp console:/app/var/demo_dialogs.md .
 ```
 
-Весь набор eval: на OpenRouter ~$0.4 и ~20 мин, на GigaChat — ~4 млн токенов квоты Freemium (~11 мин). Итоги — вкладка
+Весь набор eval: на OpenRouter ~$0.35 и ~22 мин, на GigaChat — ~4 млн токенов квоты Freemium (~11 мин). Итоги — вкладка
 консоли «Качество».
 
 ## Остановить и начать заново
@@ -67,8 +74,9 @@ docker compose down --volumes    # удалить всё (индекс, ходы
 
 ## Удалённый сервер
 
-С вашей машины по ssh — тот же код и тот же `.env`. Впишите в локальный `.env` `DEPLOY_SSH=user@host`,
-`DEPLOY_DIR=~/oil_ouroboros` и при необходимости `DEPLOY_KEY=~/.ssh/ключ`, затем:
+С вашей машины по ssh — тот же код и тот же `.env`. Впишите в локальный `.env` `DEPLOY_SSH=user@host`, `DEPLOY_DIR`
+(каталог с правом записи, например `~/oil_ouroboros`; в шаблоне — `/opt/oil-ouroboros`) и при необходимости
+`DEPLOY_KEY=~/.ssh/ключ`, затем:
 
 ```bash
 python scripts/deploy.py up                # копия кода + .env на сервер, сборка, запуск

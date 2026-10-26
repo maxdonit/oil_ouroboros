@@ -22,7 +22,7 @@ const DOCS = [
   ["adr/0001-ouroboros-as-agent.md", "ADR-0001: агент — Ouroboros, инструменты — LangGraph"],
   ["demo_dialogs.md", "Демо-диалоги (реальные прогоны)"],
   ["report.md", "Отчёт: решения, качество, ограничения, что улучшить"],
-  ["eval_report.md", "Полный прогон eval (37 кейсов, профиль openrouter)"],
+  ["eval_report.md", "Полный прогон eval (42 кейса, профиль openrouter)"],
   ["_root/config/README.md", "Каталог параметров инструментов"],
 ];
 

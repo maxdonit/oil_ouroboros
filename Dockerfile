@@ -46,7 +46,7 @@ CMD ["tools"]
 FROM base AS ml
 RUN apt-get update && apt-get install -y --no-install-recommends libgl1 libglib2.0-0 \
     && rm -rf /var/lib/apt/lists/*
-# torch — CPU-сборка (GPU стенда занят другим проектом; на CPU BGE-M3 кодирует вопрос за доли секунды).
+# torch — CPU-сборка: GPU не требуется, на CPU BGE-M3 кодирует вопрос за доли секунды.
 # torchvision — тоже из CPU-индекса: сборка из PyPI собрана под CUDA-torch и падает на импорте.
 ARG TORCH_INDEX=https://download.pytorch.org/whl/cpu
 RUN pip install torch==2.14.1 torchvision==0.29.1 --index-url ${TORCH_INDEX}

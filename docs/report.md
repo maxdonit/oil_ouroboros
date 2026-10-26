@@ -30,7 +30,7 @@ Dev-набор — 42 вопроса с эталонными цифрами и �
 
 ```bash
 docker compose exec console oilo eval --only R01 F01 O01                         # выборочно
-docker compose exec console oilo eval --label baseline --report var/eval.md      # весь набор: OpenRouter ~$0.3, ~20 мин; GigaChat — 5–7 млн токенов Ultra (замеры на 37 кейсах)
+docker compose exec console oilo eval --label baseline --report var/eval.md      # весь набор: OpenRouter ~$0.35, ~22 мин; GigaChat — ~4 млн токенов Ultra, ~11 мин
 docker compose exec console oilo compare <id базы> <id кандидата>                # McNemar по кейсам
 docker compose exec tools oilo eval-retrieval --label baseline                   # поиск и отбор по слоям, без агента
 ```
@@ -59,10 +59,11 @@ docker compose exec tools oilo eval-retrieval --label baseline                  
   прогноза спроса в OPEC MOMR не попали в отбор фрагментов: агент ответил по найденному, не выдумывая цифр.
 - **Лишний веб (R17).** Оценщик достаточности счёл отчёты неполными, хотя ответ в них был.
 
-**Профиль `openrouter`** (агент `claude-haiku-5.5`, инструменты `gpt-6-luna`) — полный набор из 37 кейсов: 32/37 = 86%
-(95% ДИ 72–94%), цифры показанного ответа подтверждены на 100%, ответ = проверенный текст — 97%, $0.0095 на ответ,
-p50 / p95 — 68 с / 88 с. Отчёт по кейсам — [eval_report.md](eval_report.md), демо-диалоги той же версии —
-[demo_dialogs.md](demo_dialogs.md).
+**Профиль `openrouter`** (агент `claude-haiku-5.5`, инструменты `gpt-6-luna`) — полный набор 2026-10-26, та же чистая
+установка, версия агента `a3357e025947`: 38/42 = 90% (95% ДИ 78–96%), цифры показанного ответа подтверждены на 100%,
+ответ = проверенный текст — 97%, p50 / p95 — 61 с / 98 с, ~$0.008 на ответ (весь прогон $0.33, 22 мин — по журналу
+LLM-шлюза). Ошибки: лишний веб (R06, R10, R14) и инвестсовет без `research` первым шагом (A01). Отчёт по кейсам —
+[eval_report.md](eval_report.md), демо-диалоги той же версии — [demo_dialogs.md](demo_dialogs.md).
 
 **Мониторинг.** Вкладки консоли «Ходы», «Мониторинг» и «Качество» показывают онлайн-проверки каждого хода: сначала
 отчёты, проверка пройдена, ответ = проверенный текст, ссылки только этого хода, метки, язык. Версия агента — это
