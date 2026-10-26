@@ -42,7 +42,8 @@ docker compose up -d           # ядро (агент, инструменты, �
 
 Консоль — `http://127.0.0.1:38620`, без пароля: открывается в простом режиме (чат и прогноз), все вкладки — кнопкой
 «Режим администратора» в шапке. UI Ouroboros (профиль owner) — `http://127.0.0.1:38630`, пароль `ouroboros`
-(сменить — `OUROBOROS_PASSWORD` в `.env`, [operations.md](docs/guide/operations.md#7-обновление)). Готовность видна в
+(сменить — `OUROBOROS_PASSWORD` в `.env`, [operations.md](docs/guide/operations.md#7-обновление)). По шаблону `.env`
+оба видны в сети сервера (`OILO_BIND=0.0.0.0`); в интернет пробрасывайте только порт консоли 38620. Готовность видна в
 шапке консоли (индикатор здоровья) и в `docker compose ps`: все сервисы ядра `healthy`. Живой ход через агента — `docker compose exec console
 oilo smoke` (GigaChat Freemium — бесплатно, на OpenRouter ~$0.01).
 

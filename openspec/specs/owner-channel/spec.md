@@ -27,7 +27,8 @@
 
 #### Scenario: Пароль по умолчанию
 - **WHEN** `.env` создан `scripts/init_env.py` из `.env.example` без правок, профиль `owner` включён
-- **THEN** UI Ouroboros на `127.0.0.1:38630` пускает по паролю `ouroboros`, без пароля — страница входа (401)
+- **THEN** UI Ouroboros на `0.0.0.0:38630` (любой адрес хоста) пускает по паролю `ouroboros`, без пароля — страница
+  входа (401)
 
 ### Requirement: Выход наружу только HTTPS-туннелем к разрешённым хостам
 Сервис `egress` (`python -m oil_ouroboros.egress`, порт 3128, сети `oilo` и `agent`, без `.env`) SHALL пропускать

@@ -46,6 +46,12 @@ tools и (профиль owner) Telegram через `egress`. На хосте п
 - **AND** tools 8000, gateway 8030, encoder 8020, ouroboros 8765, qdrant 6333, gpt2giga 8090, egress 3128 на хосте не
   видны
 
+#### Scenario: Порты по шаблону .env
+- **WHEN** `.env` создан `scripts/init_env.py` из `.env.example` без правок
+- **THEN** в нём `OILO_BIND=0.0.0.0`: консоль — `0.0.0.0:38620`, UI Ouroboros (профиль owner) — `0.0.0.0:38630`, то
+  есть на всех адресах хоста, и консоль открывается с других машин сети по адресу хоста
+- **AND** `OILO_BIND=127.0.0.1` в `.env` возвращает публикацию только для этой машины
+
 #### Scenario: Прокси агента
 - **WHEN** агент обращается наружу
 - **THEN** у него `HTTPS_PROXY=http://egress:3128`, а `NO_PROXY=gateway,tools,ouroboros,localhost,127.0.0.1`: шлюз и
