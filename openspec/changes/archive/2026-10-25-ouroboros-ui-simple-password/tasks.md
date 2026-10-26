@@ -32,7 +32,7 @@
   - `python scripts/deploy.py up`, затем `docker compose up -d --force-recreate bootstrap ouroboros`;
   - засев прошёл без ошибок;
   - консоль: здоровье Ouroboros `ok`, живой ход проходит;
-  - `GET http://192.168.41.1:38630/` без пароля — страница входа (401), сценарий «Пароль по умолчанию».
+  - `GET` UI Ouroboros стенда (порт 38630) без пароля — страница входа (401), сценарий «Пароль по умолчанию».
 
   Пароль в браузер не вводится. Проверка: журнал засева, ответы API, ход.
   Итог: копия `.env` стенда — `.env.bak-2026-10-25-ouroboros-password`; `OUROBOROS_PASSWORD=ouroboros` в локальном и

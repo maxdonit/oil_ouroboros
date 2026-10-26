@@ -156,9 +156,9 @@ def test_smoke_expects_exactly_the_mcp_tools():
 
 
 # «N инструментов MCP», «N MCP», «N `mcp_oil__*`»: число инструментов агента в текстах (снимки прошлых прогонов —
-# docs/eval_report.md, docs/demo_dialogs.md — не трогаем: там число своего времени)
+# docs/eval_report.md, docs/eval_report_gigachat.md, docs/demo_dialogs.md — не трогаем: там число своего времени)
 TOOL_COUNT = re.compile(r"\b(\d+)\s+(?:инструмент\w*\s+(?:по\s+)?MCP|MCP\b|`mcp_oil__\*`)")
-SNAPSHOTS = ("docs/eval_report.md", "docs/demo_dialogs.md")
+SNAPSHOTS = ("docs/eval_report.md", "docs/eval_report_gigachat.md", "docs/demo_dialogs.md")
 
 
 def test_mcp_tool_count_in_texts():

@@ -55,7 +55,7 @@ docker compose exec console oilo demo                                  # 7 де�
 docker compose exec tools oilo eval-retrieval --label check            # поиск по отчётам, без агента
 ```
 
-Весь набор eval: на OpenRouter ~$0.4 и ~20 мин, на GigaChat — 5–7 млн токенов квоты Freemium. Итоги — вкладка
+Весь набор eval: на OpenRouter ~$0.4 и ~20 мин, на GigaChat — ~4 млн токенов квоты Freemium (~11 мин). Итоги — вкладка
 консоли «Качество».
 
 ## Остановить и начать заново

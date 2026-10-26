@@ -26,10 +26,10 @@
   предупреждение с адресом; `docker-compose.yml`: `OILO_BIND: ${OILO_BIND:-127.0.0.1}` у `console`; проверка — тесты 2.2.
   Итог: `oilo_bind` в `Settings`, `_local()` в `console/app.py` (middleware и `main`), строка в compose; проверено
   тестами 2.2.
-- [x] 2.2 `tests/conftest.py`: `OILO_BIND=127.0.0.1`; `tests/test_console.py`: при `0.0.0.0` и `192.168.41.1` — 503 с
+- [x] 2.2 `tests/conftest.py`: `OILO_BIND=127.0.0.1`; `tests/test_console.py`: при `0.0.0.0` и адресе в сети — 503 с
   причиной, `/api/health` без входа — только `{status, version}`; при `127.0.0.1` — `role == "admin"`; выражение
   `OILO_BIND` в `environment` консоли совпадает с адресом в её `ports`; проверка — `pytest tests/test_console.py`.
-  Итог: `test_open_mode_only_when_published_on_loopback` (503 и текст без адреса на `0.0.0.0` и `192.168.41.1`,
+  Итог: `test_open_mode_only_when_published_on_loopback` (503 и текст без адреса на `0.0.0.0` и адресе в сети,
   `/api/health` — `{status, version}`, журнал `main`, на `127.0.0.1` — admin) и
   `test_compose_gives_console_its_publish_address`; `pytest tests/test_console.py` — 14 passed.
   Далее: при verify добавлен `test_wrong_password_or_unknown_role_is_401` (сценарии «Неверный пароль или запись
