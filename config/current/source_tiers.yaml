@@ -1,0 +1,206 @@
+# Политика доверия к веб-источникам (версионируемая; версия пишется в журнал каждого решения).
+#
+# Уровень 0 — первичные данные (агентства, регуляторы, статистика).
+# Уровень 1 — ценовые агентства под принципами IOSCO (Argus, Platts, OPIS, ICIS) и ведущие информагентства.
+# Уровень 2 — качественная деловая и отраслевая пресса.
+# Уровень 3 — «не подтверждено»: неизвестный домен или средняя оценка качества. Можно упоминать как фон,
+#             нельзя опирать на него цифры (правило проверки цифр).
+# deny       — жёлтая пресса, контент-фермы, конспирология: отбрасывается до попадания в контекст.
+#
+# Для доменов вне курируемых списков уровень выводится из агрегата экспертных рейтингов качества новостных доменов
+# Lin et al., PNAS Nexus 2023 (11 520 доменов, оценка pc1 от 0 до 1; data/source_quality/domain_pc1.csv):
+#   pc1 ≥ tier1_min → 1;  pc1 ≥ tier2_min → 2;  pc1 ≥ deny_below → 3;  pc1 < deny_below → deny.
+# Курируемые списки имеют приоритет над агрегатом: русскоязычные СМИ в нём покрыты слабо, а государственные
+# агентства любой стороны не отбрасываются молча, а маркируются (state_affiliated) и получают уровень 3.
+#
+# Пресс-релизы: лента релизов (press_release.wires) — уровень 3 всегда; адрес перепечатки релиза (url_patterns) —
+# уровень 3 на доменах СМИ, но не на первоисточниках: релиз регулятора, агентства или биржи (уровень 0, домен органа
+# власти) — это первичные данные. Порядок правил — src/oil_ouroboros/web/credibility.py.
+version: "2026-10-23.2"
+thresholds:
+  tier1_min: 0.85
+  tier2_min: 0.60
+  deny_below: 0.40
+tier0:
+  - opec.org
+  - iea.org
+  - eia.gov
+  - energy.gov
+  - jodidata.org
+  - ief.org
+  - minenergo.gov.ru
+  - minfin.gov.ru
+  - economy.gov.ru
+  - cbr.ru
+  - rosstat.gov.ru
+  - worldbank.org
+  - imf.org
+  - bis.org
+  - federalreserve.gov
+  - ecb.europa.eu
+  - cftc.gov
+  - sec.gov
+  - ec.europa.eu
+  - treasury.gov
+  - home.treasury.gov
+  - ofac.treasury.gov
+  - gov.uk
+  - aramco.com
+  - adnoc.ae
+  - gazprom-neft.ru
+  - rosneft.ru
+  - lukoil.ru
+  - cmegroup.com
+  - ice.com
+  - moex.com
+  - spimex.com             # Санкт-Петербургская биржа: первичные биржевые данные
+  - bakerhughes.com        # первоисточник данных о буровой активности (rig count)
+  - ukmto.org              # UK Maritime Trade Operations: официальные сводки инцидентов в проливах
+  - government.ru          # Правительство РФ
+  - kremlin.ru             # официальные заявления (Указы, стенограммы)
+tier1:
+  - reuters.com
+  - bloomberg.com
+  - argusmedia.com
+  - spglobal.com
+  - opisnet.com
+  - icis.com
+  - ft.com
+  - wsj.com
+  - apnews.com
+  - interfax.ru
+  - interfax.com
+  - kpler.com
+  - vortexa.com
+  - rystadenergy.com
+  - woodmac.com
+  - energyaspects.com
+  - energyintel.com
+  - economist.com
+  - nikkei.com
+  - asia.nikkei.com
+tier2:
+  - kommersant.ru
+  - vedomosti.ru
+  - rbc.ru
+  - neftegaz.ru
+  - oilcapital.ru
+  - ngv.ru
+  - forbes.ru
+  - frankmedia.ru
+  - interfax-russia.ru
+  - bne.eu
+  - intellinews.com
+  - oilprice.com
+  - rigzone.com
+  - upstreamonline.com
+  - energyvoice.com
+  - offshore-energy.biz
+  - hellenicshippingnews.com
+  - lloydslist.com
+  - tradewindsnews.com
+  - cnbc.com
+  - marketwatch.com
+  - barrons.com
+  - bbc.com
+  - theguardian.com
+  - nytimes.com
+  - washingtonpost.com
+  - aljazeera.com
+  - scmp.com
+  - caixinglobal.com
+  - investing.com
+  - forexlive.com
+  - naturalgasintel.com
+  - worldoil.com
+  - ogj.com
+  - jpt.spe.org
+  - pgjonline.com
+state_affiliated:  # уровень 3 с меткой «государственное СМИ»: заявления официальных лиц — да, цифры — нет
+  - tass.ru
+  - tass.com
+  - ria.ru
+  - rg.ru
+  - xinhuanet.com
+  - news.cn
+  - globaltimes.cn
+  - presstv.ir
+  - irna.ir
+  - spa.gov.sa
+  - wam.ae
+government_suffixes:  # домены органов власти и международных организаций → уровень 0 (кроме гос. СМИ из state_affiliated)
+  - gov
+  - gov.ru
+  - gov.uk
+  - europa.eu
+  - int
+  - gov.cn
+  - gov.in
+  - go.jp
+  - gc.ca
+  - gov.br
+  - gov.au
+  - gouv.fr
+  - gob.mx
+  - gov.kz
+  - gov.sa
+  - gov.ae
+site_operators:  # доверенный проход Brave / DuckDuckGo (у них нет списка доменов): site: по важности, не больше 12
+  - reuters.com
+  - bloomberg.com
+  - ft.com
+  - wsj.com
+  - argusmedia.com
+  - spglobal.com
+  - apnews.com
+  - interfax.ru
+  - iea.org
+  - eia.gov
+  - opec.org
+press_release:  # перепечатки пресс-релизов — уровень 3: это слова компании, а не проверка редакцией
+  wires:
+    - prnewswire.com
+    - businesswire.com
+    - globenewswire.com
+    - accesswire.com
+    - einpresswire.com
+    - newsfilecorp.com
+  url_patterns:
+    - markets.ft.com/data/announce
+    - /press-release
+    - /pressreleases/
+    - PR_NEWS
+deny:
+  - kp.ru
+  - mk.ru
+  - life.ru
+  - tsargrad.tv
+  - pravda.ru
+  - ren.tv
+  - topwar.ru
+  - zen.yandex.ru
+  - dzen.ru
+  - pikabu.ru
+  - dailymail.co.uk
+  - thesun.co.uk
+  - mirror.co.uk
+  - express.co.uk
+  - dailystar.co.uk
+  - zerohedge.com
+  - infowars.com
+  - naturalnews.com
+  - breitbart.com
+  - thegatewaypundit.com
+  - beforeitsnews.com
+  - globalresearch.ca
+  - sputniknews.com
+  - rt.com
+  - telegra.ph
+  - medium.com
+  - quora.com
+  - reddit.com
+  - facebook.com
+  - x.com
+  - twitter.com
+  - tiktok.com
+  - youtube.com

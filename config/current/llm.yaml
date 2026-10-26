@@ -1,0 +1,15 @@
+# Модели субагентов LangGraph (сервис инструментов). Модели самого агента (Ouroboros) — в его settings.json
+# (ouroboros/settings.template.json), их видно в консоли на вкладке «Параметры».
+# Переопределения: LLM_MODEL_SUBAGENT (слой env) и CATALOG_SET.
+# Таймауты вложены: вызов субагента (timeout_s × (1 + retries)) < вызов инструмента MCP (180 с) < ход (480 с).
+version: 1
+subagent:           # план поиска и отбор фрагментов с оценкой достаточности (research, search_reports)
+  model: openai/gpt-6-luna          # профиль openrouter: дешёвая модель с хорошим JSON; на gigachat — LLM_MODEL_SUBAGENT
+  temperature: 0.0                  # 0 — максимальная воспроизводимость
+  timeout_s: 45                     # таймаут одного вызова, с (обычно 3–15 с)
+  retries: 1                        # повторов после сбоя или таймаута
+  reasoning_effort: low             # глубина рассуждений, профиль openrouter (reasoning.effort); у gpt2giga выключены
+                                    # (без параметра gpt-6-luna тратит на план и отбор 300–1300 токенов рассуждений,
+                                    # 11–15 с на вызов)
+  hedge_after_s: 15                 # нет ответа за 15 с — дублирующий запрос, берётся первый ответ: у провайдера
+                                    # бывают всплески (каждый 5-й вызов плана — 44–60 с вместо 10)

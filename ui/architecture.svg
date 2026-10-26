@@ -1,0 +1,188 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 820" width="1200" height="820" font-family="Segoe UI, Helvetica, Arial, sans-serif">
+  <title>Нефтегазовый аналитик на Ouroboros — архитектура</title>
+  <defs>
+    <marker id="arr" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="7" markerHeight="7" orient="auto-start-reverse">
+      <path d="M0,0 L10,5 L0,10 z" fill="#4b5563"/>
+    </marker>
+    <style>
+      .t { font-size: 14px; font-weight: 700; fill: #111827; }
+      .b { font-size: 12px; font-weight: 700; fill: #1f2937; }
+      .s { font-size: 12px; fill: #1f2937; }
+      .x { font-size: 11px; fill: #374151; }
+      .m { font-size: 10.5px; fill: #4b5563; font-family: Consolas, Menlo, monospace; }
+      .l { font-size: 11px; fill: #4b5563; font-style: italic; }
+      .ln { stroke: #4b5563; stroke-width: 1.6; fill: none; marker-end: url(#arr); }
+      .dash { stroke: #6b7280; stroke-width: 1.4; fill: none; stroke-dasharray: 5 4; marker-end: url(#arr); }
+    </style>
+  </defs>
+  <rect width="1200" height="820" fill="#ffffff"/>
+  <text x="20" y="32" font-size="20" font-weight="700" fill="#111827">Нефтегазовый аналитик на Ouroboros — архитектура</text>
+
+  <!-- служебное API консоли → tools (поверх агента) -->
+  <path class="ln" d="M340,80 V62 H1020 V80"/>
+  <text x="560" y="57" class="l">служебное API: прогоны инструментов, финал хода, источники</text>
+
+  <!-- пользователь и консоль -->
+  <rect x="20" y="92" width="150" height="56" rx="8" fill="#f3f4f6" stroke="#9ca3af"/>
+  <text x="95" y="116" text-anchor="middle" class="t">Пользователь</text>
+  <text x="95" y="135" text-anchor="middle" class="s">браузер</text>
+  <path class="ln" d="M170,120 H200"/>
+
+  <rect x="200" y="80" width="280" height="206" rx="10" fill="#e0ecff" stroke="#3b82f6"/>
+  <text x="214" y="104" class="t">console · :38620</text>
+  <text x="214" y="124" class="s">UI для проверки и мониторинга:</text>
+  <text x="214" y="141" class="s">чат · ходы · мониторинг · качество</text>
+  <text x="214" y="158" class="s">параметры · прогноз · источники</text>
+  <text x="214" y="175" class="s">демо · архитектура</text>
+  <text x="214" y="200" class="x">ставит агенту задачу и записывает ход;</text>
+  <text x="214" y="215" class="x">что показать пользователю, решает tools</text>
+  <text x="214" y="230" class="x">(перепроверка ответа и метки источников)</text>
+  <text x="214" y="250" class="x">без пароля: простой режим / админ</text>
+  <text x="214" y="275" class="m">сети: agent · oilo</text>
+  <path class="ln" d="M480,140 H520"/>
+  <text x="484" y="133" class="l">задача</text>
+
+  <!-- агент -->
+  <rect x="520" y="80" width="300" height="270" rx="10" fill="#f5f3ff" stroke="#7c3aed" stroke-width="1.6"/>
+  <text x="534" y="104" class="t">ouroboros — агент</text>
+  <text x="534" y="122" class="s">Ouroboros v7.7.0, официальный образ, без форка</text>
+  <rect x="534" y="132" width="272" height="54" rx="6" fill="#ffffff" stroke="#c4b5fd"/>
+  <text x="544" y="150" class="b">память: роль и регламент аналитика</text>
+  <text x="544" y="166" class="m">identity.md · WORLD.md ·</text>
+  <text x="544" y="180" class="m">knowledge/overview.md</text>
+  <rect x="534" y="194" width="272" height="72" rx="6" fill="#ffffff" stroke="#c4b5fd"/>
+  <text x="544" y="212" class="b">ход консоли = задача API Ouroboros</text>
+  <text x="544" y="228" class="x">встроенные инструменты (код, shell) выключены;</text>
+  <text x="544" y="243" class="x">9 инструментов MCP + finish_task,</text>
+  <text x="544" y="258" class="x">knowledge_read / knowledge_list</text>
+  <rect x="534" y="274" width="272" height="46" rx="6" fill="#ffffff" stroke="#c4b5fd" stroke-dasharray="5 4"/>
+  <text x="544" y="292" class="b">канал владельца (профиль owner)</text>
+  <text x="544" y="308" class="x">UI владельца, Telegram, расписания</text>
+  <text x="534" y="340" class="m">сеть: только agent — без выхода в интернет</text>
+  <path class="ln" d="M820,150 H860"/>
+  <text x="824" y="143" class="l">MCP</text>
+
+  <!-- инструменты -->
+  <rect x="860" y="80" width="320" height="330" rx="10" fill="#e8f7ee" stroke="#16a34a" stroke-width="1.6"/>
+  <text x="874" y="104" class="t">tools — инструменты агента</text>
+  <text x="874" y="122" class="s">инструменты MCP — графы LangGraph</text>
+  <rect x="874" y="132" width="292" height="58" rx="6" fill="#ffffff" stroke="#86efac"/>
+  <text x="884" y="150" class="b">research · search_reports</text>
+  <text x="884" y="166" class="x">план → поиск → отбор и оценка (LLM) →</text>
+  <text x="884" y="181" class="x">веб по правилу приоритета (код) → пакет</text>
+  <rect x="874" y="196" width="292" height="28" rx="6" fill="#ffffff" stroke="#86efac"/>
+  <text x="884" y="215" class="x"><tspan class="b">search_web</tspan> — веб с фильтром доверия</text>
+  <rect x="874" y="230" width="292" height="42" rx="6" fill="#ffffff" stroke="#86efac"/>
+  <text x="884" y="248" class="b">forecast_price · supply_shock_scenario ·</text>
+  <text x="884" y="264" class="x"><tspan class="b">price_history · price_quote</tspan> — EIA, Мосбиржа</text>
+  <rect x="874" y="278" width="292" height="42" rx="6" fill="#ffffff" stroke="#86efac"/>
+  <text x="884" y="296" class="x"><tspan class="b">verify_answer</tspan> — каждая цифра ↔ источник</text>
+  <text x="884" y="312" class="x">(код, не LLM); финал хода консоли</text>
+  <text x="874" y="340" class="s">журнал доказательств R# · W# · F#</text>
+  <text x="874" y="358" class="s">list_reports · наблюдатель выпусков</text>
+  <text x="874" y="376" class="s">цены EIA (каждые 6 ч) · котировки по запросу</text>
+  <text x="874" y="400" class="m">сети: agent · oilo</text>
+
+  <!-- данные -->
+  <rect x="860" y="470" width="150" height="80" rx="8" fill="#fff7ed" stroke="#f97316"/>
+  <text x="935" y="492" text-anchor="middle" class="t">qdrant</text>
+  <text x="935" y="510" text-anchor="middle" class="x">векторная база</text>
+  <text x="935" y="524" text-anchor="middle" class="x">фрагментов отчётов</text>
+  <text x="935" y="542" text-anchor="middle" class="m">oilo</text>
+  <rect x="1030" y="470" width="150" height="80" rx="8" fill="#fff7ed" stroke="#f97316"/>
+  <text x="1105" y="492" text-anchor="middle" class="t">encoder</text>
+  <text x="1105" y="510" text-anchor="middle" class="x">BGE-M3 · Docling:</text>
+  <text x="1105" y="524" text-anchor="middle" class="x">векторы, разбор PDF</text>
+  <text x="1105" y="542" text-anchor="middle" class="m">oilo</text>
+  <path class="ln" d="M935,410 V470"/>
+  <text x="940" y="445" class="l">поиск</text>
+  <path class="ln" d="M1105,410 V470"/>
+  <text x="1110" y="445" class="l">векторы</text>
+  <path class="ln" d="M1030,520 H1010"/>
+  <text x="1012" y="568" class="l">индексация отчётов</text>
+  <rect x="860" y="580" width="320" height="70" rx="8" fill="#ffffff" stroke="#d1d5db"/>
+  <text x="874" y="600" class="b">база отчётов</text>
+  <text x="874" y="617" class="x">data/reports (git): OPEC MOMR · IEA OMR · EIA STEO,</text>
+  <text x="874" y="632" class="x">по 2 выпуска; новые — наблюдатель или ручная</text>
+  <text x="874" y="645" class="x">загрузка (общий том tools и encoder)</text>
+
+  <!-- LLM-шлюз -->
+  <rect x="520" y="560" width="300" height="110" rx="10" fill="#fef3c7" stroke="#d97706" stroke-width="1.6"/>
+  <text x="534" y="584" class="t">gateway — LLM-шлюз</text>
+  <text x="534" y="604" class="s">все вызовы моделей: агент и инструменты</text>
+  <text x="534" y="621" class="x">GigaChat → gpt2giga, прочее → OpenRouter;</text>
+  <text x="534" y="636" class="x">лимит денег, журнал вызовов, кэш промпта</text>
+  <text x="534" y="660" class="m">сети: agent · oilo</text>
+  <path class="ln" d="M760,350 V560"/>
+  <text x="766" y="470" class="l">LLM агента</text>
+  <path class="ln" d="M860,395 H840 V610 H820"/>
+  <text x="844" y="455" class="l">LLM</text>
+
+  <!-- разовый засев -->
+  <rect x="520" y="372" width="200" height="48" rx="8" fill="#ffffff" stroke="#9ca3af" stroke-dasharray="5 4"/>
+  <text x="534" y="392" class="b">bootstrap — разовый засев</text>
+  <text x="534" y="409" class="x">до старта: настройки и память</text>
+  <path class="dash" d="M600,372 V350"/>
+
+  <!-- канал владельца -->
+  <rect x="190" y="312" width="305" height="208" rx="10" fill="#faf5ff" stroke="#8b5cf6" stroke-dasharray="6 4"/>
+  <text x="204" y="334" class="b">профиль owner — канал владельца</text>
+  <rect x="204" y="344" width="276" height="46" rx="8" fill="#ede9fe" stroke="#8b5cf6"/>
+  <text x="214" y="363" class="b">ouroboros-ui · :38630</text>
+  <text x="214" y="380" class="x">собственный UI Ouroboros, вход по паролю</text>
+  <rect x="204" y="398" width="276" height="46" rx="8" fill="#ede9fe" stroke="#8b5cf6"/>
+  <text x="214" y="417" class="b">schedules — разовый засев</text>
+  <text x="214" y="434" class="x">расписание: утренняя сводка 9:00 МСК</text>
+  <rect x="204" y="452" width="276" height="54" rx="8" fill="#ede9fe" stroke="#8b5cf6"/>
+  <text x="214" y="471" class="b">egress — выход агента наружу</text>
+  <text x="214" y="487" class="x">только HTTPS к хостам EGRESS_ALLOW</text>
+  <text x="214" y="501" class="x">(по умолчанию api.telegram.org)</text>
+  <path class="ln" d="M480,366 L520,310"/>
+  <path class="dash" d="M480,421 L520,330"/>
+  <path class="ln" d="M520,345 L480,470"/>
+
+  <rect x="20" y="380" width="150" height="60" rx="8" fill="#f3f4f6" stroke="#9ca3af"/>
+  <text x="95" y="404" text-anchor="middle" class="t">Владелец</text>
+  <text x="95" y="424" text-anchor="middle" class="s">браузер · Telegram</text>
+  <path class="ln" d="M170,395 L204,370"/>
+
+  <!-- внешние сервисы -->
+  <rect x="20" y="740" width="330" height="56" rx="8" fill="#f9fafb" stroke="#9ca3af"/>
+  <text x="185" y="764" text-anchor="middle" class="b">Telegram</text>
+  <text x="185" y="782" text-anchor="middle" class="x">бот владельца: навык telegram Ouroboros</text>
+  <path class="ln" d="M340,506 V740"/>
+  <path class="ln" d="M38,440 V740"/>
+
+  <rect x="520" y="740" width="145" height="56" rx="8" fill="#f9fafb" stroke="#9ca3af"/>
+  <text x="592" y="764" text-anchor="middle" class="b">OpenRouter</text>
+  <text x="592" y="782" text-anchor="middle" class="x">профиль openrouter</text>
+  <rect x="675" y="740" width="145" height="56" rx="8" fill="#f9fafb" stroke="#9ca3af" stroke-dasharray="5 4"/>
+  <text x="747" y="764" text-anchor="middle" class="b">gpt2giga → GigaChat</text>
+  <text x="747" y="782" text-anchor="middle" class="x">по умолчанию</text>
+  <path class="ln" d="M592,670 V740"/>
+  <path class="ln" d="M747,670 V740"/>
+
+  <rect x="860" y="740" width="150" height="56" rx="8" fill="#f9fafb" stroke="#9ca3af"/>
+  <text x="935" y="764" text-anchor="middle" class="b">веб-поиск</text>
+  <text x="935" y="782" text-anchor="middle" class="x">Tavily · Brave · DuckDuckGo</text>
+  <rect x="1030" y="740" width="150" height="56" rx="8" fill="#f9fafb" stroke="#9ca3af"/>
+  <text x="1105" y="764" text-anchor="middle" class="b">сайты агентств · биржа</text>
+  <text x="1105" y="782" text-anchor="middle" class="x">OPEC · IEA · EIA · Мосбиржа</text>
+  <path class="ln" d="M1180,300 H1192 V715 H935 V740"/>
+  <path class="ln" d="M1105,715 V740"/>
+  <text x="1040" y="708" class="l">интернет (сеть oilo)</text>
+
+  <!-- легенда -->
+  <rect x="55" y="545" width="270" height="180" rx="10" fill="#ffffff" stroke="#e5e7eb"/>
+  <text x="69" y="567" class="b">Как читать</text>
+  <text x="69" y="587" class="x">Сплошная рамка — ядро: его всегда</text>
+  <text x="69" y="601" class="x">запускает docker compose up -d.</text>
+  <text x="69" y="619" class="x">Пунктир — профиль (по умолчанию</text>
+  <text x="69" y="633" class="x">owner и gigachat) или разовый сервис.</text>
+  <text x="69" y="653" class="m">agent</text>
+  <text x="112" y="653" class="x">— сеть без выхода в интернет</text>
+  <text x="69" y="670" class="m">oilo</text>
+  <text x="112" y="670" class="x">— сеть с выходом в интернет</text>
+  <text x="69" y="692" class="x">Каждый сервис описан полями x-role /</text>
+  <text x="69" y="706" class="x">x-why в docker-compose.yml.</text>
+</svg>

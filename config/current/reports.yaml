@@ -1,0 +1,69 @@
+# Правила наблюдателя за выпусками отчётов (src/oil_ouroboros/reports/watch.py; что в базе — консоль → «Источники»).
+version: 1
+#
+# Наблюдатель держит в базе последние `lookback` месячных выпусков каждой серии: по графику `schedule` (без него —
+# по `earliest_day`) понимает, мог ли выйти выпуск; пробует прямые ссылки `urls` (подстановки: {yyyy} 2026 · {yy} 26 ·
+# {mm} 10 · {month} october · {mon} oct · {Month} October), для самого свежего выпуска — ещё `latest_url`; проверяет
+# по первым страницам, что скачан именно нужный выпуск (`{Month} {yyyy}`); кладёт файл в общий каталог выпусков
+# и добавляет в индекс.
+# Ответ с проверкой от ботов (Cloudflare) записывается как «закрыто проверкой» и не обходится — такой выпуск
+# загружается вручную: `oilo reports --upload файл.pdf` (серия и выпуск определяются по `detect` и обложке).
+sources:
+  - series: OPEC MOMR                 # имя серии в журнале наблюдателя и в «Источниках» консоли
+    org: OPEC                         # агентство: фильтр поиска (orgs) и метка [Отчёт OPEC …]
+    report: MOMR                      # короткое имя отчёта: id выпуска — opec-momr-ГГГГ-ММ
+    title: Monthly Oil Market Report
+    kind: pdf                         # pdf | html: как скачивать и разбирать
+    page: https://www.opec.org/monthly-oil-market-report.html  # страница серии: ссылка в списке источников ответа
+    license: OPEC — с указанием источника
+    lookback: 2                       # сколько последних месячных выпусков держать в базе (больше — дольше индексация)
+    detect: ["Monthly Oil Market Report", "OPEC"]  # слова на обложке: по ним ручная загрузка узнаёт серию
+    # проверено 2026-10-22: и страницы, и файлы /assets/assetdb/ opec.org закрыты проверкой Cloudflare (403), поэтому
+    # выпуски 2026-09 и 2026-10 лежат в git (data/reports), новые загружаются вручную. Ссылки оставлены на случай,
+    # если доступ откроют; имена непостоянны (momr-sep-2026, momr-august-2026, momr-october-2025-1)
+    urls:
+      - https://www.opec.org/assets/assetdb/momr-{month}-{yyyy}.pdf
+      - https://www.opec.org/assets/assetdb/momr-{mon}-{yyyy}.pdf
+      - https://www.opec.org/assets/assetdb/momr-{month}-{yyyy}-1.pdf
+    latest_url: https://momr.opec.org/pdf-download/
+    # официальный график 2026 (страница MOMR, «2026 release dates»)
+    schedule:
+      "2026-01": "2026-01-14"
+      "2026-02": "2026-02-11"
+      "2026-03": "2026-03-11"
+      "2026-04": "2026-04-13"
+      "2026-05": "2026-05-13"
+      "2026-06": "2026-06-11"
+      "2026-07": "2026-07-13"
+      "2026-08": "2026-08-12"
+      "2026-09": "2026-09-10"
+      "2026-10": "2026-10-13"
+      "2026-11": "2026-11-11"
+      "2026-12": "2026-12-14"
+
+  - series: EIA STEO
+    org: EIA
+    report: STEO
+    title: Short-Term Energy Outlook
+    kind: pdf
+    page: https://www.eia.gov/outlooks/steo/
+    license: public domain (EIA)
+    lookback: 2
+    earliest_day: 6               # графика в каталоге нет; STEO выходит в первой половине месяца, не раньше 6-го
+    detect: ["Short-Term Energy Outlook"]
+    urls:
+      - https://www.eia.gov/outlooks/steo/archives/{mon}{yy}.pdf
+    latest_url: https://www.eia.gov/outlooks/steo/pdf/steo_full.pdf
+
+  - series: IEA OMR
+    org: IEA
+    report: OMR
+    title: Oil Market Report (публичная версия)
+    kind: html
+    page: https://www.iea.org/reports/oil-market-report
+    license: IEA — публичная часть отчёта; полный OMR по подписке
+    lookback: 2
+    earliest_day: 11              # графика в каталоге нет; OMR выходит в середине месяца, не раньше 11-го
+    detect: ["Oil Market Report", "IEA"]
+    urls:
+      - https://www.iea.org/reports/oil-market-report-{month}-{yyyy}

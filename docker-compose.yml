@@ -1,0 +1,418 @@
+# Нефтегазовый аналитик на Ouroboros. Запуск: python scripts/init_env.py (.env и внутренние токены), ключ
+# GIGACHAT_CREDENTIALS в .env, затем одна команда: docker compose up -d
+#
+# Что делает каждый сервис и зачем он отдельный — поля x-role и x-why у сервиса (их же показывает вкладка консоли
+# «Архитектура»; тест проверяет, что они есть у каждого сервиса, сети и тома).
+#
+# Ядро (запускается всегда): qdrant, encoder, gateway, tools, bootstrap, ouroboros, console.
+# Профили — COMPOSE_PROFILES в .env; шаблон .env.example включает оба (owner,gigachat), пусто — только ядро (на
+# LLM-профиле gigachat без профиля compose gigachat у шлюза нет модели: сначала scripts/llm_profile.py openrouter):
+#   owner    — канал владельца Ouroboros: его собственный UI, Telegram и навыки (выход наружу через egress), утренняя
+#              сводка по расписанию;
+#   gigachat — модели GigaChat через прокси gpt2giga: LLM-профиль по умолчанию (scripts/llm_profile.py openrouter
+#              переключает на OpenRouter и убирает этот профиль).
+# Хост без прямого выхода в интернет — дополнение deploy/compose/proxy.yml (COMPOSE_FILE в .env).
+name: ${COMPOSE_PROJECT_NAME:-oilo}
+
+# .env общий для сервисов на образе oilo/app, поэтому чужие секреты обнуляются: у сервиса есть только те ключи,
+# что перечислены у него явно
+x-no-secrets: &no-secrets
+  OPENROUTER_API_KEY: ""
+  OUROBOROS_PASSWORD: ""
+  MCP_TOKEN: ""
+  TOOLS_API_TOKEN: ""
+  TAVILY_API_KEY: ""
+  BRAVE_API_KEY: ""
+  TELEGRAM_BOT_TOKEN: ""
+  GIGACHAT_CREDENTIALS: ""
+  GPT2GIGA_API_KEY: ""
+  GATEWAY_TOKEN_OUROBOROS: ""
+  GATEWAY_TOKEN_TOOLS: ""
+  GATEWAY_TOKEN_CONSOLE: ""
+
+# Карта связей для вкладки консоли «Архитектура»: кто кого вызывает и что передаёт. Концы связи — сервисы этого файла
+# (и deploy/compose/proxy.yml) или внешние участники из x-externals; тест сверяет, что все концы существуют.
+x-externals:
+  user: "Пользователь: браузер — консоль"
+  owner: "Владелец: браузер и Telegram (профиль owner)"
+  internet: "Интернет: веб-поиск, сайты агентств, цены EIA, котировки Мосбиржи (iss.moex.com), модели HuggingFace"
+  openrouter: "OpenRouter: модели LLM (LLM-профиль openrouter)"
+  gigachat: "GigaChat: API Сбера (профиль gigachat)"
+  telegram: "Telegram: бот владельца"
+x-links:
+  - {from: user, to: console, what: "вопросы и ответы, ходы, мониторинг"}
+  - {from: console, to: ouroboros, what: "задача хода и поток её событий"}
+  - {from: console, to: tools, what: "финал хода, прогоны инструментов, источники, прогноз"}
+  - {from: console, to: gateway, what: "журнал вызовов LLM и расходы"}
+  - {from: ouroboros, to: tools, what: "9 инструментов по MCP"}
+  - {from: ouroboros, to: gateway, what: "LLM агента"}
+  - {from: tools, to: gateway, what: "LLM инструментов (план, отбор)"}
+  - {from: tools, to: qdrant, what: "гибридный поиск фрагментов"}
+  - {from: tools, to: encoder, what: "векторы вопроса; индексация новых выпусков"}
+  - {from: encoder, to: qdrant, what: "запись фрагментов в индекс"}
+  - {from: tools, to: internet, what: "веб-поиск, сайты агентств, цены EIA, котировки Мосбиржи"}
+  - {from: encoder, to: internet, what: "модели HuggingFace (первый запуск)"}
+  - {from: gateway, to: openrouter, what: "модели LLM"}
+  - {from: gateway, to: gpt2giga, what: "модели GigaChat-*"}
+  - {from: gpt2giga, to: gigachat, what: "API GigaChat, токен Сбера"}
+  - {from: bootstrap, to: ouroboros, what: "засев настроек и памяти (том данных)"}
+  - {from: owner, to: ouroboros-ui, what: "собственный UI Ouroboros"}
+  - {from: ouroboros-ui, to: ouroboros, what: "проброс порта UI"}
+  - {from: schedules, to: ouroboros, what: "засев расписания утренней сводки"}
+  - {from: ouroboros, to: egress, what: "Telegram, навыки владельца"}
+  - {from: egress, to: telegram, what: "api.telegram.org — только HTTPS"}
+  - {from: owner, to: telegram, what: "чат с ботом"}
+
+x-app: &app
+  image: oilo/app:${OILO_TAG:-local}
+  build: {context: ., target: app}   # один образ для gateway, tools, console, bootstrap, schedules, egress
+  env_file: .env
+  init: true
+  networks: [oilo]
+
+services:
+  qdrant:
+    x-role: Векторная база фрагментов отчётов (dense и sparse векторы, гибридный поиск)
+    x-why: Готовый образ векторной БД; индекс живёт в своём томе и переживает пересборку остальных сервисов
+    image: qdrant/qdrant:v1.19.2
+    restart: unless-stopped
+    volumes:
+      - qdrant_data:/qdrant/storage
+    mem_limit: 2g
+    networks: [oilo]
+
+  encoder:
+    x-role: >-
+      Модели BGE-M3 (векторы вопросов и фрагментов) и Docling (разбор PDF с таблицами); индексирует отчёты — при пустом
+      индексе строит базу сам (6 выпусков — ~1–1,5 ч на CPU)
+    x-why: >-
+      Модели весят ~5 ГБ и грузятся минутами: в отдельном контейнере они загружаются один раз, а образ и перезапуск
+      tools остаются лёгкими
+    image: oilo/ml:${OILO_TAG:-local}
+    build: {context: ., target: ml}
+    command: ["encoder"]
+    restart: unless-stopped
+    environment:                         # без .env: секреты кодировщику не нужны
+      EMBEDDER: ${EMBEDDER:-bge-m3}
+      RERANKER: ${RERANKER:-none}
+      AUTO_INGEST: ${AUTO_INGEST:-true}
+      HF_HOME: /app/models
+      HTTPS_PROXY: ${OUTBOUND_PROXY:-}   # загрузка моделей HuggingFace, если прямого выхода нет
+      NO_PROXY: qdrant,localhost,127.0.0.1
+      ENCODER_URL: ""                    # модели — в этом процессе
+      QDRANT_URL: http://qdrant:6333
+      REPORTS_AUTO_DIR: /app/var/reports
+      OMP_NUM_THREADS: ${ENCODER_THREADS:-4}
+      MKL_NUM_THREADS: ${ENCODER_THREADS:-4}
+      TOKENIZERS_PARALLELISM: "false"
+      DOCLING_THREADS: ${DOCLING_THREADS:-}       # пусто — как ENCODER_THREADS
+      DOCLING_TABLE_MODE: ${DOCLING_TABLE_MODE:-FAST}
+    volumes:
+      - tools_var:/app/var               # общий с tools: выпуски отчётов, кэш разбора
+      - models:/app/models
+    depends_on:
+      qdrant: {condition: service_started}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8020/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 180s
+    mem_limit: 5g
+    cpus: ${ENCODER_THREADS:-4}
+    networks: [oilo]
+
+  gateway:
+    <<: *app
+    x-role: >-
+      LLM-шлюз: через него идут все вызовы моделей — агента и инструментов; ключ провайдера, жёсткий лимит денег,
+      журнал вызовов, маркеры кэша промпта для Claude; модели GigaChat-* — в gpt2giga
+    x-why: >-
+      Ouroboros живёт в сети без выхода наружу, и до модели он доходит только через шлюз; ключ провайдера знает
+      только шлюз, у остальных — свои токены
+    command: ["gateway"]
+    restart: unless-stopped
+    environment:
+      <<: *no-secrets
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      GPT2GIGA_API_KEY: ${GPT2GIGA_API_KEY:-}
+      GATEWAY_DIR: /app/var/gateway
+      GATEWAY_TOKENS: ouroboros:${GATEWAY_TOKEN_OUROBOROS:?задайте GATEWAY_TOKEN_OUROBOROS в .env},tools:${GATEWAY_TOKEN_TOOLS:?задайте GATEWAY_TOKEN_TOOLS},console:${GATEWAY_TOKEN_CONSOLE:?задайте GATEWAY_TOKEN_CONSOLE}
+    volumes:
+      - gateway_var:/app/var
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8030/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 20s
+    mem_limit: 512m
+    networks: [oilo, agent]
+
+  tools:
+    <<: *app
+    x-role: >-
+      Инструменты агента по MCP: графы LangGraph — research, веб, прогноз, проверка ответа; журнал доказательств
+      R#/W#/F#; финал хода консоли; наблюдатель выпусков отчётов; цены EIA и котировки Мосбиржи
+    x-why: Отделён от агента — читает недоверенный веб и не знает ни пароля Ouroboros, ни ключа LLM
+    command: ["tools"]
+    restart: unless-stopped
+    environment:
+      <<: *no-secrets
+      TOOLS_API_TOKEN: ${TOOLS_API_TOKEN:?задайте TOOLS_API_TOKEN (scripts/init_env.py)}
+      MCP_TOKEN: ${MCP_TOKEN:-}
+      TAVILY_API_KEY: ${TAVILY_API_KEY:-}
+      BRAVE_API_KEY: ${BRAVE_API_KEY:-}
+      QDRANT_URL: http://qdrant:6333
+      ENCODER_URL: http://encoder:8020
+      LLM_PROVIDER: openai_compatible
+      OPENAI_COMPAT_BASE_URL: http://gateway:8030/api/v1
+      OPENAI_COMPAT_API_KEY: ${GATEWAY_TOKEN_TOOLS}
+      REPORTS_AUTO_DIR: /app/var/reports
+    volumes:
+      - tools_var:/app/var
+    depends_on:
+      qdrant: {condition: service_started}
+      encoder: {condition: service_started}
+      gateway: {condition: service_healthy}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 60s
+    mem_limit: 3g
+    cpus: ${TOOLS_CPUS:-4}
+    networks: [oilo, agent]
+
+  bootstrap:
+    <<: *app
+    x-role: "Разовый засев агента до его старта: settings.json, память (identity, WORLD, регламент аналитика)"
+    x-why: >-
+      Ouroboros читает настройки и память при старте; новая версия засева заменяет только то, что агент или владелец
+      сами не меняли
+    command: ["bootstrap"]
+    restart: "no"
+    user: "0:0"                          # каталог данных Ouroboros принадлежит его пользователю (uid 1000)
+    environment:
+      <<: *no-secrets
+      GATEWAY_TOKEN_OUROBOROS: ${GATEWAY_TOKEN_OUROBOROS}
+      MCP_TOKEN: ${MCP_TOKEN:-}
+      OUROBOROS_PASSWORD: ${OUROBOROS_PASSWORD:-}
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      OUROBOROS_DATA: /ouroboros-data
+      OUROBOROS_HOME: /ouroboros-home
+      OUROBOROS_WORK: /ouroboros-work
+    volumes:
+      - ouroboros_data:/ouroboros-data
+      - ouroboros_home:/ouroboros-home
+      - ouroboros_work:/ouroboros-work
+
+  ouroboros:
+    x-role: >-
+      Агент — официальный образ Ouroboros на закреплённом релизе, без форка: рассуждение, выбор инструментов, ответ;
+      память и регламент аналитика
+    x-why: >-
+      Основа решения по требованиям. Сеть agent без выхода наружу: у агента есть код и shell, поэтому наружу — только
+      LLM через шлюз, инструменты через tools и (профиль owner) Telegram через egress
+    image: oilo/ouroboros:7.7.0
+    build:
+      context: https://github.com/razzant/ouroboros.git#e41596c389c3c33c3155637aaf67f8bebbf4934d   # релиз v7.7.0, официальный Dockerfile, без правок
+      args:
+        BUILDKIT_CONTEXT_KEEP_GIT_DIR: "1"   # Ouroboros ведёт своё «тело» в git (/app/.git): без каталога он пытается создать его сам
+    restart: on-failure                  # после /panic контейнер остаётся остановленным
+    init: true
+    stop_grace_period: 30s
+    user: "1000:1000"                    # не root (в официальном Dockerfile нет USER)
+    environment:
+      OUROBOROS_LAUNCH_INTENT: automatic
+      OUROBOROS_DATA_DIR: /data
+      OUROBOROS_SERVER_HOST: 0.0.0.0
+      OUROBOROS_DISABLE_MANAGED_UPDATES: "1"
+      OUROBOROS_FILE_BROWSER_DEFAULT: /app   # как в официальном образе: Files — тело агента (BIBLE.md, prompts/, docs/)
+      OUROBOROS_SUBAGENT_PROJECTS_ROOT: /work/projects
+      OUROBOROS_SUBAGENT_WORKTREE_ROOT: /work/subagent_worktrees
+      OUROBOROS_DELIVERABLES_ROOT: /work/Deliverables
+      HOME: /home/ouroboros
+      # интернет владельца (Telegram, навыки) — только через egress (профиль owner): у него список разрешённых хостов;
+      # LLM — через gateway, инструменты — tools: внутренняя сеть, мимо прокси
+      HTTPS_PROXY: http://egress:3128
+      NO_PROXY: gateway,tools,ouroboros,localhost,127.0.0.1
+    volumes:
+      - ouroboros_data:/data
+      - ouroboros_work:/work
+      - ouroboros_home:/home/ouroboros
+    depends_on:
+      bootstrap: {condition: service_completed_successfully}
+      tools: {condition: service_healthy}  # воркер Ouroboros читает список инструментов MCP один раз: tools должен отвечать
+      gateway: {condition: service_healthy}
+    healthcheck:                         # /api/health отвечает и без супервизора; готовность — supervisor_ready (с loopback без пароля)
+      test: ["CMD", "python", "-c", "import json,urllib.request as u; s=json.load(u.urlopen('http://127.0.0.1:8765/api/state', timeout=5)); raise SystemExit(0 if s.get('supervisor_ready') else 1)"]
+      interval: 30s
+      timeout: 10s
+      start_period: 90s
+    mem_limit: 4g
+    cpus: 2
+    networks: [agent]
+
+  console:
+    <<: *app
+    x-role: >-
+      Консоль: чат с аналитиком, демо, ходы агента, мониторинг, качество (eval), параметры, прогноз, источники,
+      архитектура; без паролей: простой режим (чат и прогноз), режим администратора (все вкладки) — кнопкой
+    x-why: >-
+      Простой UI по требованиям; ставит агенту задачи и записывает ходы, а что показать пользователю, решает сервис
+      инструментов; память агента — только на чтение
+    command: ["console"]
+    restart: unless-stopped
+    environment:
+      <<: *no-secrets
+      TOOLS_API_TOKEN: ${TOOLS_API_TOKEN}
+      OUROBOROS_PASSWORD: ${OUROBOROS_PASSWORD:-}
+      GATEWAY_TOKEN_CONSOLE: ${GATEWAY_TOKEN_CONSOLE}
+      TOOLS_URL: http://tools:8000
+      OUROBOROS_URL: http://ouroboros:8765
+      OUROBOROS_DATA_DIR: /ouroboros-data
+      GATEWAY_URL: http://gateway:8030
+    ports:
+      - "${OILO_BIND:-127.0.0.1}:${OILO_PORT:-38620}:8000"
+    volumes:
+      - console_var:/app/var
+      - ouroboros_data:/ouroboros-data:ro
+    depends_on:
+      tools: {condition: service_started}
+      ouroboros: {condition: service_started}
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://127.0.0.1:8000/api/health"]
+      interval: 30s
+      timeout: 5s
+      start_period: 30s
+    mem_limit: 1g
+    networks: [oilo, agent]
+
+  # ------------------------------------------------------------------------------------------- профиль owner
+  ouroboros-ui:
+    x-role: >-
+      Публикует собственный UI Ouroboros наружу (вход по паролю): чат владельца со всеми инструментами агента, задачи,
+      настройки, навыки, Telegram
+    x-why: Сам агент в сети без выхода наружу; этот проброс порта — единственный вход к нему снаружи
+    image: alpine/socat:1.8.0.3
+    profiles: ["owner"]
+    command: ["-d", "TCP-LISTEN:8765,fork,reuseaddr", "TCP:ouroboros:8765"]
+    restart: unless-stopped
+    ports:
+      - "${OILO_BIND:-127.0.0.1}:${OUROBOROS_UI_PORT:-38630}:8765"
+    depends_on:
+      ouroboros: {condition: service_started}
+    mem_limit: 64m
+    networks: [oilo, agent]
+
+  egress:
+    <<: *app
+    x-role: >-
+      Выход агента наружу для канала владельца: только CONNECT :443 к хостам EGRESS_ALLOW (по умолчанию
+      api.telegram.org); за корпоративным прокси — через него (deploy/compose/proxy.yml)
+    x-why: Telegram и навыки владельца, при том что у агента с кодом и shell нет свободного выхода в интернет
+    env_file: []                         # без .env: секреты прокси не нужны
+    command: ["egress"]
+    profiles: ["owner"]
+    restart: unless-stopped
+    environment:
+      EGRESS_ALLOW: ${EGRESS_ALLOW:-api.telegram.org}
+      EGRESS_UPSTREAM: ${EGRESS_UPSTREAM:-}
+    mem_limit: 128m
+    networks: [oilo, agent]
+
+  schedules:
+    <<: *app
+    x-role: "Разовый засев расписаний Ouroboros после его старта: утренняя сводка в 9:00 МСК"
+    x-why: >-
+      Расписания создаются через API живого агента; дальше их ведёт владелец в UI Ouroboros, засев его правку не
+      откатывает
+    command: ["schedules"]
+    profiles: ["owner"]
+    restart: "no"
+    user: "1000:1000"                    # учёт засева — в данных Ouroboros (state/oilo_seed.json), владелец — его пользователь
+    environment:
+      <<: *no-secrets
+      OUROBOROS_PASSWORD: ${OUROBOROS_PASSWORD:-}
+      OUROBOROS_URL: http://ouroboros:8765
+      OUROBOROS_DATA: /ouroboros-data
+    volumes:
+      - ouroboros_data:/ouroboros-data
+    depends_on:
+      ouroboros: {condition: service_healthy}
+    mem_limit: 256m
+    networks: [agent]
+
+  # ------------------------------------------------------------------------------------------- профиль gigachat
+  gpt2giga:
+    x-role: "Прокси формата OpenAI в API GigaChat: переводит запросы шлюза и сам обновляет токен доступа Сбера"
+    x-why: >-
+      Нужен только на LLM-профиле gigachat; доверяет корню Минцифры, которым подписаны серверы Сбера (этому корню —
+      только он)
+    image: ghcr.io/ai-forever/gpt2giga:0.3.0-py3.12
+    profiles: ["gigachat"]
+    restart: unless-stopped
+    environment:                         # без .env: только свои ключи
+      GPT2GIGA_MODE: PROD
+      GPT2GIGA_HOST: 0.0.0.0
+      GPT2GIGA_PORT: "8090"
+      GPT2GIGA_ENABLE_API_KEY_AUTH: "True"
+      GPT2GIGA_API_KEY: ${GPT2GIGA_API_KEY:-}             # общий с шлюзом; создают init_env.py и llm_profile.py
+      GPT2GIGA_LOG_REDACT_SENSITIVE: "True"
+      # Ouroboros просит рассуждения (reasoning_effort), а GigaChat 3 Ultra в этом режиме зацикливается и тратит весь
+      # max_tokens, не дав ответа (проверено 2026-10-23); без рассуждений отвечает и зовёт инструменты нормально
+      GPT2GIGA_DISABLE_REASONING: "True"
+      GIGACHAT_CREDENTIALS: ${GIGACHAT_CREDENTIALS:-}     # ключ авторизации GigaChat API (личный кабинет Сбера)
+      GIGACHAT_SCOPE: ${GIGACHAT_SCOPE:-GIGACHAT_API_PERS}
+      GIGACHAT_VERIFY_SSL_CERTS: "True"
+      GIGACHAT_CA_BUNDLE_FILE: /certs/russian_trusted_root_ca.pem
+      GIGACHAT_MAX_CONNECTIONS: ${GIGACHAT_MAX_CONNECTIONS:-1}   # Freemium — один поток: запросы ждут в очереди прокси
+      GIGACHAT_TIMEOUT: "180"
+    volumes:
+      - ./deploy/gigachat/russian_trusted_root_ca.pem:/certs/russian_trusted_root_ca.pem:ro
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request as u; u.urlopen('http://127.0.0.1:8090/health', timeout=5)"]
+      interval: 30s
+      timeout: 10s
+      start_period: 20s
+    mem_limit: 512m
+    networks: [oilo]
+
+volumes:
+  qdrant_data:
+    x-why: индекс фрагментов отчётов (Qdrant)
+  models:
+    x-why: модели HuggingFace (BGE-M3, Docling) — пересоздание индекса их не трогает
+  tools_var:
+    x-why: >-
+      журнал доказательств, прогоны инструментов, выпуски отчётов от наблюдателя, кэш разбора, цены EIA, сохранённые
+      котировки Мосбиржи — var/quotes (общий с encoder)
+  gateway_var:
+    x-why: журнал вызовов LLM и их тела, учёт денег
+  console_var:
+    x-why: ходы консоли (turns.sqlite) и прогоны eval
+  ouroboros_data:
+    x-why: данные агента — память, задачи, настройки, журналы (консоль читает их только на чтение)
+  ouroboros_work:
+    x-why: рабочие каталоги субагентов Ouroboros
+  ouroboros_home:
+    x-why: домашний каталог пользователя Ouroboros
+
+networks:
+  # явные подсети: на хостах со многими сетями пулы Docker по умолчанию кончаются («address pools fully subnetted»)
+  oilo:
+    x-why: >-
+      Сеть проекта с выходом наружу: веб-поиск, сайты агентств, цены EIA и котировки Мосбиржи (tools), модели
+      HuggingFace (encoder), провайдер LLM (gateway, gpt2giga)
+    name: ${COMPOSE_PROJECT_NAME:-oilo}
+    ipam:
+      config:
+        - subnet: ${OILO_SUBNET:-10.213.8.0/24}
+  agent:
+    x-why: >-
+      Внутренняя сеть без выхода наружу: агент Ouroboros и те, с кем он говорит, — шлюз, инструменты, консоль,
+      (профиль owner) UI владельца, egress и засев расписаний
+    name: ${COMPOSE_PROJECT_NAME:-oilo}_agent
+    internal: true
+    ipam:
+      config:
+        - subnet: ${OILO_AGENT_SUBNET:-10.213.9.0/24}

@@ -1,0 +1,67 @@
+# Каталог отраслевых отчётов, которые индексирует RAG.
+# Поля: file — файл в data/reports; org/report — организация и серия (идут в метку цитаты);
+# edition — выпуск ГГГГ-ММ (по нему «последний выпуск» получает приоритет); published — дата публикации;
+# url — откуда взят; download — прямая ссылка, по которой файл получен; license — условия и указание источника.
+# Все три агентства лежат в git, чтобы база была полной сразу после клонирования, без сети:
+# - EIA STEO — public domain (EIA);
+# - OPEC MOMR — © OPEC, воспроизводится с указанием источника;
+# - IEA OMR — публичная часть отчёта на iea.org, © IEA, с указанием источника.
+# Новые выпуски скачивает наблюдатель по правилам config/current/reports.yaml в общий каталог выпусков (var/reports);
+# выпуск OPEC за проверкой Cloudflare загружают вручную (`oilo reports --upload`). Загрузчик объединяет оба каталога
+# (src/oil_ouroboros/reports/editions.py: load). Указание источников — NOTICE.md.
+# Метка цитаты в ответе: [Отчёт {org} {report}, {месяц год}, с. {страница PDF}] или раздел для HTML.
+documents:
+  - file: eia_steo_2026-10.pdf
+    org: EIA
+    report: STEO
+    title: Short-Term Energy Outlook
+    edition: "2026-10"
+    published: "2026-10-06"
+    url: https://www.eia.gov/outlooks/steo/
+    download: https://www.eia.gov/outlooks/steo/pdf/steo_full.pdf
+    license: public domain (EIA)
+  - file: eia_steo_2026-09.pdf
+    org: EIA
+    report: STEO
+    title: Short-Term Energy Outlook
+    edition: "2026-09"
+    published: "2026-09-09"
+    url: https://www.eia.gov/outlooks/steo/archives/sep26.pdf
+    download: https://www.eia.gov/outlooks/steo/archives/sep26.pdf
+    license: public domain (EIA)
+  - file: opec_momr_2026-10.pdf
+    org: OPEC
+    report: MOMR
+    title: Monthly Oil Market Report
+    edition: "2026-10"
+    published: "2026-10-13"
+    url: https://www.opec.org/monthly-oil-market-report.html
+    download: https://www.opec.org/monthly-oil-market-report.html
+    license: © OPEC — воспроизводится с указанием источника (OPEC Monthly Oil Market Report, October 2026)
+  - file: opec_momr_2026-09.pdf
+    org: OPEC
+    report: MOMR
+    title: Monthly Oil Market Report
+    edition: "2026-09"
+    published: "2026-09-10"
+    url: https://www.opec.org/monthly-oil-market-report.html
+    download: https://www.opec.org/monthly-oil-market-report.html
+    license: © OPEC — воспроизводится с указанием источника (OPEC Monthly Oil Market Report, September 2026)
+  - file: iea_omr_2026-10.html
+    org: IEA
+    report: OMR
+    title: Oil Market Report (публичная версия)
+    edition: "2026-10"
+    published: "2026-10-14"
+    url: https://www.iea.org/reports/oil-market-report
+    download: https://www.iea.org/reports/oil-market-report-october-2026
+    license: © IEA — публичная часть отчёта, с указанием источника (IEA Oil Market Report, October 2026)
+  - file: iea_omr_2026-09.html
+    org: IEA
+    report: OMR
+    title: Oil Market Report (публичная версия)
+    edition: "2026-09"
+    published: "2026-09-11"
+    url: https://www.iea.org/reports/oil-market-report
+    download: https://www.iea.org/reports/oil-market-report-september-2026
+    license: © IEA — публичная часть отчёта, с указанием источника (IEA Oil Market Report, September 2026)

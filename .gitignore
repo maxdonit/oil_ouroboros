@@ -1,0 +1,19 @@
+# окружение и секреты
+.env
+.env.*
+!.env.example
+# рабочие данные
+var/
+backups/
+# Python
+__pycache__/
+*.py[cod]
+*.egg-info/
+build/
+dist/
+.venv/
+.pytest_cache/
+.ruff_cache/
+# IDE
+.idea/
+.vscode/

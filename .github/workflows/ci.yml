@@ -1,0 +1,39 @@
+# Проверка на push в main и на каждый pull request: линтер, формат, тесты (без сети и денег: fake-LLM, хеш-эмбеддер,
+# встроенный Qdrant, веб выключен). Тяжёлые зависимости кодировщика (extra `ml`) тестам не нужны.
+# Спеки OpenSpec — структурная проверка всех спек и change той же версией CLI, что у разработчика (.claude/skills/sdd).
+name: ci
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    strategy:
+      matrix:
+        python-version: ["3.10", "3.12"]   # заявленный минимум (pyproject) и версия образов
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+          cache: pip
+      - run: pip install -e ".[dev]"
+      - run: ruff check src tests scripts
+      - run: ruff format --check src tests scripts
+      - run: pytest -q
+
+  specs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "22"
+      - run: npx -y @fission-ai/openspec@1.14.1 validate --all --strict
+        env:
+          OPENSPEC_TELEMETRY: "0"

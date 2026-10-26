@@ -1,0 +1,60 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Нефтегазовый аналитик на Ouroboros</title>
+  <meta name="description" content="Консоль агента «Старший аналитик нефтегазового рынка» (Ouroboros + инструменты LangGraph): чат, ходы агента, мониторинг, качество, параметры.">
+  <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Cpath d='M16 3c5 7 9 11.5 9 16.5A9 9 0 0 1 7 19.5C7 14.5 11 10 16 3z' fill='%232a78d6'/%3E%3C/svg%3E">
+  <link rel="stylesheet" href="/ui/app.css?v=20261026.1">
+  <!-- Версия ассетов (?v=…) обходит эвристическое кэширование браузера: при правке ui/ увеличьте её во всех строках ниже. -->
+  <script type="importmap">
+  {
+    "imports": {
+      "/ui/main.js": "/ui/main.js?v=20261026.1",
+      "/ui/util.js": "/ui/util.js?v=20261026.1",
+      "/ui/api.js": "/ui/api.js?v=20261026.1",
+      "/ui/md.js": "/ui/md.js?v=20261026.1",
+      "/ui/turnview.js": "/ui/turnview.js?v=20261026.1",
+      "/ui/chat.js": "/ui/chat.js?v=20261026.1",
+      "/ui/turns.js": "/ui/turns.js?v=20261026.1",
+      "/ui/monitor.js": "/ui/monitor.js?v=20261026.1",
+      "/ui/evals.js": "/ui/evals.js?v=20261026.1",
+      "/ui/params.js": "/ui/params.js?v=20261026.1",
+      "/ui/forecast.js": "/ui/forecast.js?v=20261026.1",
+      "/ui/sources.js": "/ui/sources.js?v=20261026.1",
+      "/ui/about.js": "/ui/about.js?v=20261026.1",
+      "/ui/sysmap.js": "/ui/sysmap.js?v=20261026.1",
+      "/ui/graphview.js": "/ui/graphview.js?v=20261026.1",
+      "/ui/demo.js": "/ui/demo.js?v=20261026.1"
+    }
+  }
+  </script>
+  <script>
+    (function () {
+      try {
+        var t = JSON.parse(localStorage.getItem("oil.theme") || "null");
+        if (t === "light" || t === "dark") document.documentElement.setAttribute("data-theme", t);
+      } catch (e) { /* хранилище недоступно — тема как в системе */ }
+    })();
+  </script>
+</head>
+<body>
+  <header class="topbar">
+    <a class="brand" href="#/chat" title="Старший аналитик нефтегазового рынка: агент Ouroboros, инструменты LangGraph">
+      <svg class="brand-logo" viewBox="0 0 32 32" aria-hidden="true"><path d="M16 3c5 7 9 11.5 9 16.5A9 9 0 0 1 7 19.5C7 14.5 11 10 16 3z"/><path class="brand-logo-line" d="M11 20.5a5 5 0 0 0 5 4.5"/></svg>
+      <span class="brand-name">Нефтегазовый аналитик</span>
+    </a>
+    <nav class="nav" id="nav" aria-label="Разделы консоли"></nav>
+    <div class="top-right">
+      <div id="health" class="health" aria-live="polite"><span class="dot"></span><span class="health-item muted">проверка системы…</span></div>
+      <button id="mode" class="btn btn-sm btn-ghost" type="button">Режим администратора</button>
+      <button id="theme" class="btn btn-sm btn-ghost" type="button">Тема</button>
+    </div>
+  </header>
+  <main id="views" class="views"></main>
+  <div id="toasts" class="toasts" role="status" aria-live="polite"></div>
+  <noscript><p class="noscript">Консоли нужен JavaScript (ES-модули). Включите его в браузере.</p></noscript>
+  <script type="module">import "/ui/main.js";</script>
+</body>
+</html>

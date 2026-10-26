@@ -1,0 +1,28 @@
+# Хост без прямого выхода в интернет: внешние запросы tools, encoder, шлюза и egress идут через готовый HTTP-прокси
+# организации; gpt2giga (профиль gigachat) прокси не получает и ходит к API GigaChat напрямую.
+# Подключение — в .env:
+#   COMPOSE_FILE=docker-compose.yml:deploy/compose/proxy.yml
+#   OUTBOUND_PROXY=http://proxy:3128        — веб-поиск, сайты отчётов, цены EIA, котировки Мосбиржи (iss.moex.com),
+#                                             модели HuggingFace, OpenRouter у шлюза
+#   UPSTREAM_PROXY=host:port                 — адрес прокси организации
+#   UPSTREAM_PROXY_NETWORK=<docker-сеть>     — если прокси доступен только из другой docker-сети (иначе bridge)
+# Канал владельца (профиль owner) идёт через тот же прокси, но со своим списком разрешённых хостов (egress).
+services:
+  proxy:
+    x-role: "Мост к прокси организации: tools, encoder, шлюз и egress выходят в интернет через proxy:3128"
+    x-why: Прокси организации доступен только из своей docker-сети; агента Ouroboros в этой сети нет
+    image: alpine/socat:1.8.0.3
+    restart: unless-stopped
+    command: ["-d", "TCP-LISTEN:3128,fork,reuseaddr", "TCP:${UPSTREAM_PROXY:?задайте UPSTREAM_PROXY=host:port}"]
+    networks: [oilo, upstream]
+    mem_limit: 64m
+
+  egress:
+    environment:
+      EGRESS_UPSTREAM: proxy:3128
+
+networks:
+  upstream:
+    x-why: docker-сеть, из которой доступен прокси организации
+    external: true
+    name: ${UPSTREAM_PROXY_NETWORK:-bridge}

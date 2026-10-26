@@ -1,0 +1,63 @@
+[build-system]
+requires = ["setuptools>=75"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "oil-ouroboros"
+version = "0.1.0"
+description = "AI-агент «Старший аналитик нефтегазового рынка»: мозг — Ouroboros, инструменты — LangGraph-субагенты по MCP"
+requires-python = ">=3.10"
+readme = "README.md"
+dependencies = [
+  "langgraph==1.2.16",
+  "langchain-core==1.6.12",
+  "langchain-openai==1.7.2",
+  "qdrant-client==1.19.1",
+  "statsforecast==2.1.1",
+  "scipy>=1.11",
+  "pandas>=2.2,<3",
+  "numpy>=2.0",
+  "fastapi==0.149.0",
+  "uvicorn==0.54.0",
+  "pydantic==2.14.1",
+  "pydantic-settings==2.16.0",
+  "httpx==0.28.1",
+  "ddgs==9.16.0",
+  "xlrd==2.0.2",
+  "pypdf==6.21.1",
+  "beautifulsoup4==4.15.0",
+  "pyyaml==6.0.3",
+  "mcp==2.3.0",
+]
+
+[project.optional-dependencies]
+# тяжёлые зависимости: разбор PDF и локальные модели эмбеддингов (образ oilo-ml: кодировщик и загрузка отчётов)
+ml = [
+  "docling==2.140.0",
+  "FlagEmbedding==1.4.2",
+  "transformers==5.20.2",
+  "accelerate==1.15.0",
+]
+dev = ["pytest==9.1.1", "ruff==0.17.1"]
+
+[project.scripts]
+oilo = "oil_ouroboros.cli:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+pythonpath = ["src"]
+addopts = "-q"
+markers = ["slow: долгие тесты (бэктест прогноза)"]
+
+[tool.ruff]
+line-length = 119
+target-version = "py310"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP"]
+# E501 проверяется: строки не длиннее line-length; длинные тексты переносятся неявной конкатенацией литералов.
+# B008: Body()/Query() в аргументах по умолчанию — идиома FastAPI.
+ignore = ["B008"]
